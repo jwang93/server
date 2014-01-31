@@ -109,15 +109,17 @@ int server(uint16_t port)
 		perror("Error setting up listen");	
 	} //does this only allow one client? 
 
+	if ((s = accept(sock, (struct sockaddr *)&client_addr, &len)) < 0) {
+		perror("Error w/ server accepting connection");
+		exit(1);				
+	}
+
 	while (1) {
 		len = sizeof(client_addr);
 		// not sure about the third argument to accept... len? 
 
 
-		if ((s = accept(sock, (struct sockaddr *)&client_addr, &len)) < 0) {
-			perror("Error w/ server accepting connection");
-			exit(1);				
-		}
+
 		printf("Accepted client connection successful!\n");
 		int recv_len = 0;
 		if ((recv_len = recv(s, reply, MAX_MSG_LENGTH, 0)) < 0) {
