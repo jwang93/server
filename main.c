@@ -42,7 +42,7 @@ int client(const char * addr, uint16_t port)
 	struct sockaddr_in server_addr;
 	char msg[MAX_MSG_LENGTH], reply[MAX_MSG_LENGTH];
 
-	if ((sock = socket(AF_INET, SOCK_STREAM/* use tcp */, 0)) < 0) {
+	if ((sock = socket(AF_INET, SOCK_STREAM/* use tcp */, IPPROTO_TCP)) < 0) {
 		perror("Create socket error (client):");
 		return 1;
 	}
@@ -81,43 +81,57 @@ int client(const char * addr, uint16_t port)
 int server(uint16_t port) 
 {
 	struct sockaddr_in client_addr;
+	struct sockaddr_in server_addr; 
 	char msg[MAX_MSG_LENGTH], reply[MAX_MSG_LENGTH];
-	int sock;
+	int sock, s;
+	int len;
 
-	client_addr.sin_family = AF_INET;
-	client_addr.sin_port = htons(port);
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(port);
+	server_addr.sin_addr.s_addr = INADDR_ANY;
+
+
 	// not sure how to set the client address? 
 
-	if ((sock = socket(AF_INET, SOCK_STREAM/* use tcp */, 0)) < 0) {
+	if ((sock = socket(AF_INET, SOCK_STREAM/* use tcp */, IPPROTO_TCP)) < 0) {
 		perror("Create socket error (server):");
 		return 1;
 	}
+	printf("Socket created!\n");
 
-	if ((bind(sock, (struct sockaddr *)&client_addr, sizeof(client_addr))) < 0) {
+	if ((bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr))) < 0) {
 		perror("Error binding socket to client address in server");
 		exit(1);
 	}
-
-	listen(sock, MAX_CLIENTS); //does this only allow one client? 
+	printf("Bind successful!\n");
+	
+	if (listen(sock, MAX_CLIENTS) < 0) {
+		perror("Error setting up listen");	
+	} //does this only allow one client? 
 
 	while (1) {
+		len = sizeof(client_addr);
 		// not sure about the third argument to accept... len? 
-		if ((s = accept(s, (struct sockaddr *)&client_addr, MAX_MSG_LENGTH)) < 0) {
+
+
+		if ((s = accept(sock, (struct sockaddr *)&client_addr, &len)) < 0) {
 			perror("Error w/ server accepting connection");
 			exit(1);				
 		}
-
+		printf("Accepted client connection successful!\n");
 		int recv_len = 0;
 		if ((recv_len = recv(s, reply, MAX_MSG_LENGTH, 0)) < 0) {
 			perror("Recv error:");
 			return 1;
 		}
-		reply[recv_len] = 0; //why do you set the reply[recv_len] = 0?
+		printf("Here is the message: %s\n", reply);
 
-		if (send(s, msg, strnlen(msg, MAX_MSG_LENGTH), 0) < 0) {
+
+		if (send(s, reply, strnlen(reply, MAX_MSG_LENGTH), 0) < 0) {
 			perror("Send error:");
 			return 1;
 		}
+		reply[recv_len] = 0; //why do you set the reply[recv_len] = 0?
 
 	}
 
