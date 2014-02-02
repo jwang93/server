@@ -13,6 +13,7 @@ int client(const char * addr, uint16_t port);
 #define MAX_BACK_LOG (5)
 #define MAX_CLIENTS (1) 
 
+
 int main(int argc, char ** argv)
 {
 	if (argc < 3) {
@@ -116,25 +117,29 @@ int server(uint16_t port)
 
 	while (1) {
 		len = sizeof(client_addr);
-		// not sure about the third argument to accept... len? 
+		int recv_len = recv(s, reply, MAX_MSG_LENGTH, 0);
 
-
-
-		printf("Accepted client connection successful!\n");
-		int recv_len = 0;
-		if ((recv_len = recv(s, reply, MAX_MSG_LENGTH, 0)) < 0) {
-			perror("Recv error:");
-			return 1;
+		if (recv_len <= 0) {
+			if (recv_len == 0) {
+				printf("Client disconnected\n");
+				if ((s = accept(sock, (struct sockaddr *)&client_addr, &len)) < 0) {
+					perror("Error w/ server accepting connection");
+					exit(1);				
+				}
+			} else {
+				perror("Recv error:");
+				return 1;				
+			}
+		} else {
+			printf("Received message from client: %s\n", reply);
 		}
-		printf("Here is the message: %s\n", reply);
 
 
 		if (send(s, reply, strnlen(reply, MAX_MSG_LENGTH), 0) < 0) {
 			perror("Send error:");
 			return 1;
 		}
-		reply[recv_len] = 0; //why do you set the reply[recv_len] = 0?
-
+		memset(&reply[0], 0, sizeof(reply));
 	}
 
 	return 0;
