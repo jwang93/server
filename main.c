@@ -84,61 +84,74 @@ int server(uint16_t port)
 	struct sockaddr_in client_addr;
 	struct sockaddr_in server_addr; 
 	char msg[MAX_MSG_LENGTH], reply[MAX_MSG_LENGTH];
-	int sock, s;
+	int server_socket;
+	int new_socket;
 	int len;
 
+	/* Configuring the server_addr */
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 
-
-	// not sure how to set the client address? 
-
-	if ((sock = socket(AF_INET, SOCK_STREAM/* use tcp */, IPPROTO_TCP)) < 0) {
+	/* Creating the server socket using SOCK_STREAM and TCP PROTOCOL */
+	if ((server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("Create socket error (server):");
 		return 1;
 	}
-	printf("Socket created!\n");
+	printf("Server's Socket created!\n");
 
-	if ((bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr))) < 0) {
+	/* Binding the socket to the server's address */
+	if ((bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr))) < 0) {
 		perror("Error binding socket to client address in server");
 		exit(1);
 	}
-	printf("Bind successful!\n");
+	printf("Server's Bind successful!\n");
 	
-	if (listen(sock, MAX_CLIENTS) < 0) {
-		perror("Error setting up listen");	
-	} //does this only allow one client? 
+	/* Allowing the server to listen to a max of MAX_CLIENTS = 1 */
+	if (listen(server_socket, MAX_CLIENTS) < 0) {
+		perror("Error setting up listen");
+	}
 
-	if ((s = accept(sock, (struct sockaddr *)&client_addr, &len)) < 0) {
+	/* Listening for a connection from a client */
+	if ((new_socket = accept(server_socket, (struct sockaddr *)&client_addr, &len)) < 0) {
 		perror("Error w/ server accepting connection");
 		exit(1);				
+	} else {
+		printf("Accepted connection from: %s\n", inet_ntoa(client_addr.sin_addr));
 	}
 
 	while (1) {
 		len = sizeof(client_addr);
-		int recv_len = recv(s, reply, MAX_MSG_LENGTH, 0);
 
-		if (recv_len <= 0) {
+		/* recv() is the method that gets the input from the client, we store return value so we know the status */
+		int recv_len = recv(new_socket, reply, MAX_MSG_LENGTH, 0);
+
+		if (recv_len <= 0) { /* Only called when client receives error or client disconnected */
 			if (recv_len == 0) {
 				printf("Client disconnected\n");
-				if ((s = accept(sock, (struct sockaddr *)&client_addr, &len)) < 0) {
+				/* Upon client disconnecting, server waits to accept the next client */
+				if ((new_socket = accept(server_socket, (struct sockaddr *)&client_addr, &len)) < 0) {
 					perror("Error w/ server accepting connection");
 					exit(1);				
+				} else {
+					printf("Accepted connection from: %s\n", inet_ntoa(client_addr.sin_addr));
 				}
 			} else {
 				perror("Recv error:");
 				return 1;				
 			}
-		} else {
+		} else { 
+			/* This is the case when recv_len > 0, which signals the server received a valid reply from client */
 			printf("Received message from client: %s\n", reply);
 		}
 
-
-		if (send(s, reply, strnlen(reply, MAX_MSG_LENGTH), 0) < 0) {
+		/* This is part of the "echo" server where server returns the client's message */
+		if (send(new_socket, reply, strnlen(reply, MAX_MSG_LENGTH), 0) < 0) {
 			perror("Send error:");
 			return 1;
 		}
+
+		/* Clearing the reply buffer with 0's for the next reply */
 		memset(&reply[0], 0, sizeof(reply));
 	}
 
