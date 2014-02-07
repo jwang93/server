@@ -13,6 +13,9 @@ int client(const char * addr, uint16_t port);
 #define MAX_BACK_LOG (5)
 #define MAX_CLIENTS (1) 
 
+/* Jay Wang, Harris Osserman */ 
+/* Friday, Feb 2014 */
+/* CS 356 Computer Network Architecture */ 
 
 int main(int argc, char ** argv)
 {
@@ -111,6 +114,9 @@ int server(uint16_t port)
 	if (listen(server_socket, MAX_CLIENTS) < 0) {
 		perror("Error setting up listen");
 	}
+
+	memset(&client_addr.sin_addr, 0, sizeof(client_addr.sin_addr));
+	len = sizeof(client_addr);
 
 	/* Listening for a connection from a client */
 	if ((new_socket = accept(server_socket, (struct sockaddr *)&client_addr, &len)) < 0) {
